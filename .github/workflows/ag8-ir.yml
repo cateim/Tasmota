@@ -1,0 +1,39 @@
+# .github/workflows/ag8-ir.yml
+#
+# Só para o fork. Os workflows oficiais do Tasmota são guardados por
+# "if: github.repository == 'arendst/Tasmota'", então não rodam em fork nenhum.
+# Este compila apenas o ambiente novo e publica o binário como artefato.
+#
+# NÃO entra no pull request: o PR fica com as 3 alterações do patch e nada mais.
+name: AG8 IR build
+
+on:
+  workflow_dispatch: # botão "Run workflow" na aba Actions
+  push:
+    branches: [tasmota32s3-ir]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+          enable-cache: false
+      - name: Install dependencies
+        run: uv pip install --system pioarduino
+      - name: Build tasmota32s3-ir
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONUTF8: "1"
+        run: platformio run -e tasmota32s3-ir
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tasmota32s3-ir
+          path: ./build_output
