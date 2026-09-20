@@ -10,7 +10,7 @@ name: AG8 IR build
 on:
   workflow_dispatch: # botão "Run workflow" na aba Actions
   push:
-    branches: [tasmota32s3-ir]
+    branches: [ag8-build, tasmota32s3-ir]
 
 jobs:
   build:
