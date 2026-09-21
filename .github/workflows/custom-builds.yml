@@ -2,9 +2,8 @@
 #
 # So para o fork. Os workflows oficiais do Tasmota sao guardados por
 # "if: github.repository == 'arendst/Tasmota'", entao nao rodam em fork nenhum.
-# Este compila os ambientes que nao existem upstream e publica os binarios:
+# Este compila os firmwares das placas da casa e publica os binarios:
 #
-#   tasmota32s3-ir     prova do PR que acrescenta a variante de IR do S3
 #   tasmota32s3-ag8    firmware da KinCony AG8, IR completo mais ethernet
 #   tasmota32s3-a16v3  firmware da KinCony A16 v3, PCF8574 mais ethernet
 #
@@ -32,11 +31,6 @@ jobs:
           enable-cache: false
       - name: Install dependencies
         run: uv pip install --system pioarduino
-      - name: Build tasmota32s3-ir
-        env:
-          PYTHONIOENCODING: utf-8
-          PYTHONUTF8: "1"
-        run: platformio run -e tasmota32s3-ir
       - name: Build tasmota32s3-ag8
         env:
           PYTHONIOENCODING: utf-8
