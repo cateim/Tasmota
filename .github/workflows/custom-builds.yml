@@ -1,0 +1,53 @@
+# .github/workflows/custom-builds.yml
+#
+# So para o fork. Os workflows oficiais do Tasmota sao guardados por
+# "if: github.repository == 'arendst/Tasmota'", entao nao rodam em fork nenhum.
+# Este compila os ambientes que nao existem upstream e publica os binarios:
+#
+#   tasmota32s3-ir     prova do PR que acrescenta a variante de IR do S3
+#   tasmota32s3-ag8    firmware da KinCony AG8, IR completo mais ethernet
+#   tasmota32s3-a16v3  firmware da KinCony A16 v3, PCF8574 mais ethernet
+#
+# NAO entra em pull request nenhum: os PRs levam so o diff da correcao.
+name: Custom Tasmota builds
+
+on:
+  workflow_dispatch: # botao "Run workflow" na aba Actions
+  push:
+    branches: [tasmota-kincony]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+          enable-cache: false
+      - name: Install dependencies
+        run: uv pip install --system pioarduino
+      - name: Build tasmota32s3-ir
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONUTF8: "1"
+        run: platformio run -e tasmota32s3-ir
+      - name: Build tasmota32s3-ag8
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONUTF8: "1"
+        run: platformio run -e tasmota32s3-ag8
+      - name: Build tasmota32s3-a16v3
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONUTF8: "1"
+        run: platformio run -e tasmota32s3-a16v3
+      - uses: actions/upload-artifact@v7
+        with:
+          name: firmware
+          path: ./build_output
