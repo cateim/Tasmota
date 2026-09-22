@@ -7,6 +7,11 @@
 #   tasmota32s3-ag8    firmware da KinCony AG8, IR completo mais ethernet
 #   tasmota32s3-a16v3  firmware da KinCony A16 v3, PCF8574 mais ethernet
 #
+# Todo push na tasmota-kincony vira uma release kincony-AAAAMMDD-<sha>, marcada
+# como a mais recente. E dela que o web flasher (self-labs/tasmota-kincony)
+# puxa os binarios: o artefato do Actions expira em 90 dias e exige login para
+# baixar, a release nao.
+#
 # NAO entra em pull request nenhum: os PRs levam so o diff da correcao.
 name: Custom Tasmota builds
 
@@ -18,6 +23,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # publicar a release com os binarios
     steps:
       - uses: actions/checkout@v6
       - name: Set up Python
@@ -45,3 +52,20 @@ jobs:
         with:
           name: firmware
           path: ./build_output
+      - name: Publicar a release
+        # So no push da branch da casa. Um "Run workflow" manual so compila.
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          short="${GITHUB_SHA::7}"
+          tag="kincony-$(date -u +%Y%m%d)-${short}"
+          gh release create "$tag" \
+            --target "$GITHUB_SHA" \
+            --title "$tag" \
+            --notes "Firmwares da casa, compilados do commit ${short} da branch tasmota-kincony. O .factory.bin grava no offset 0x0 numa placa vazia ou vinda de outro firmware; o .bin serve para OTA." \
+            --latest \
+            build_output/firmware/tasmota32s3-ag8.factory.bin \
+            build_output/firmware/tasmota32s3-ag8.bin \
+            build_output/firmware/tasmota32s3-a16v3.factory.bin \
+            build_output/firmware/tasmota32s3-a16v3.bin
