@@ -1,8 +1,3 @@
-# KinCony AG8 and KC868-A16v3, 16 MB flash.
-# The same table Tasmota writes by itself on the first boot of the 4 MB
-# esp32_partition_app2880k_fs320k.csv (resize_fs_to_max grows the last
-# partition to the end of the flash). Shipping it in the factory image means
-# flashing the image again leaves the filesystem, and the settings in it, alone.
 # Name,   Type, SubType, Offset,  Size, Flags
 nvs,      data, nvs,     0x9000,  0x5000,
 otadata,  data, ota,     0xe000,  0x2000,
