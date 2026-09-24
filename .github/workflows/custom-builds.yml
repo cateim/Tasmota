@@ -69,3 +69,21 @@ jobs:
             build_output/firmware/tasmota32s3-ag8.bin \
             build_output/firmware/tasmota32s3-a16v3.factory.bin \
             build_output/firmware/tasmota32s3-a16v3.bin
+
+      - name: Republicar o web flasher
+        # O site copia os binarios da release mais nova, mas so sabe que ela
+        # existe quando roda. Este passo o dispara, entao a release e o site saem
+        # juntos. O token e um fine-grained do dono, so no self-labs/tasmota-kincony,
+        # com Actions read and write; o github.token daqui nao alcanca outro
+        # repositorio. Sem o secret, o passo avisa e segue: o site ainda se
+        # atualiza pela rotina diaria dele.
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.FLASHER_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::FLASHER_DISPATCH_TOKEN ausente; o site pega esta release na rotina diaria."
+            exit 0
+          fi
+          gh workflow run pages.yml --repo self-labs/tasmota-kincony --ref master
+          echo "Deploy do web flasher disparado."
