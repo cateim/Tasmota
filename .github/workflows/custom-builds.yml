@@ -5,7 +5,7 @@
 # Este compila os firmwares das placas da casa e publica os binarios:
 #
 #   tasmota32s3-ag8    firmware da KinCony AG8, IR completo mais ethernet
-#   tasmota32s3-a16v3  firmware da KinCony A16 v3, PCF8574 mais ethernet
+#   tasmota32s3-a16v3  firmware da KinCony A16v3, PCF8574 mais ethernet
 #
 # Todo push na tasmota-kincony vira uma release kincony-AAAAMMDD-<sha>, marcada
 # como a mais recente. E dela que o web flasher (self-labs/tasmota-kincony)
