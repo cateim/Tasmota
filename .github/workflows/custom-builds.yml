@@ -73,10 +73,11 @@ jobs:
       - name: Republicar o web flasher
         # O site copia os binarios da release mais nova, mas so sabe que ela
         # existe quando roda. Este passo o dispara, entao a release e o site saem
-        # juntos. O token e um fine-grained do dono, so no self-labs/tasmota-kincony,
-        # com Actions read and write; o github.token daqui nao alcanca outro
-        # repositorio. Sem o secret, o passo avisa e segue: o site ainda se
-        # atualiza pela rotina diaria dele.
+        # juntos. O token e um classic do dono, so com o escopo public_repo e
+        # sem validade: a organizacao self-labs recusa fine-grained com mais de
+        # 366 dias. O github.token daqui nao alcanca outro repositorio. Sem o
+        # secret, o passo avisa e segue: o site ainda se atualiza pela rotina
+        # diaria dele.
         if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ secrets.FLASHER_DISPATCH_TOKEN }}
