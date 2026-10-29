@@ -59,7 +59,7 @@ class Matter_Device
   var root_discriminator              # as `int`
   var root_passcode                   # as `int`
   var ipv4only                        # advertize only IPv4 addresses (no IPv6)
-  var disable_bridge_mode             # default is bridge mode, this flag disables this mode for some non-compliant controllers
+  var disable_bridge_mode             # expose application endpoints as native static endpoints
   var next_ep                         # next endpoint to be allocated for bridge, start at 1
   var debug                           # debug mode, output all values when responding to read request with wildcard
   var configuration_version           # persistent Basic Information configuration version
@@ -765,13 +765,21 @@ class Matter_Device
   end
 
   #############################################################
+  # Increment the persisted composition version without publishing updates.
+  # This is used when a restart will rebuild the endpoint topology.
+  #
+  def bump_configuration_version()
+    self.configuration_version += 1
+    if self.configuration_version <= 0   self.configuration_version = 1 end
+  end
+
+  #############################################################
   # Signal to controller that endpoints changed via subcriptions
   #
   def signal_endpoints_changed()
     # Basic Information ConfigurationVersion represents composition changes,
     # while Descriptor PartsList invalidations refresh the affected topology.
-    self.configuration_version += 1
-    if self.configuration_version <= 0   self.configuration_version = 1 end
+    self.bump_configuration_version()
     self.attribute_updated(0x0000, 0x0028, 0x0018, false)
     # mark parts lists as changed
     self.attribute_updated(0x0000, 0x001D, 0x0003, false)
@@ -852,6 +860,18 @@ class Matter_Device
     return http_remote
   end
 
+  # Notify all endpoints sharing a remote when BridgedDeviceBasic Reachable changes.
+  def http_reachable_changed(remote)
+    import introspect
+    for plugin: self.plugins
+      if introspect.get(plugin, "http_remote") == remote && plugin.contains_cluster(0x0039)
+        plugin.attribute_updated(0x0039, 0x0011)
+        plugin.publish_event(0x0039, 0x03, 1 #-matter.EVENT_INFO-#,
+                             matter.TLV.Matter_TLV_item().set(0x08 #-matter.TLV.BOOL-#, remote.reachable))
+      end
+    end
+  end
+
   #####################################################################
   # Manager MQTT remotes
   #####################################################################
@@ -895,7 +915,7 @@ class Matter_Device
   def mqtt_reachable_changed(remote)
     import introspect
     for plugin: self.plugins
-      if introspect.get(plugin, "mqtt_remote") == remote
+      if introspect.get(plugin, "mqtt_remote") == remote && plugin.contains_cluster(0x0039)
         plugin.attribute_updated(0x0039, 0x0011)
       end
     end
@@ -907,7 +927,8 @@ class Matter_Device
   # Lazy subscription to tasmota/discovery/# — only on first config page visit
   #####################################################################
   def ensure_discovery()
-    if !self.discovery_subscribed
+    # when Matter is disabled, init() returns early and `discovery_subscribed` is `nil`
+    if self.discovery_subscribed == false
       self.subscribe_discovery()
       self.discovery_subscribed = true
     end
@@ -917,16 +938,17 @@ class Matter_Device
   def subscribe_discovery()
     import mqtt
     mqtt.subscribe("tasmota/discovery/#", / topic, idx, data, databytes -> self.handle_global_discovery(topic, data))
-    log("MTR: Subscribed to tasmota/discovery/#", 3)
   end
 
   # Parse discovery messages, store by topic
   def handle_global_discovery(mqtt_topic, data)
     if data == nil   return   end
+    # discovery tables are not initialized when Matter is disabled
+    if self.discovered_devices == nil || self.discovered_sensors == nil   return   end
     import json
     import string
     var j = type(data) == 'string' ? json.load(data) : data
-    if j == nil   return   end
+    if !isinstance(j, map)   return   end      # also rejects `nil` and non-object JSON
 
     # tasmota/discovery/<MAC>/config or tasmota/discovery/<MAC>/sensors
     var discovery_prefix_len = size("tasmota/discovery/")
@@ -1154,7 +1176,10 @@ class Matter_Device
         cmd_cleaned[uc[cleaned_command_idx]] = payload_json[k]
       end
       # call plug-in
-      pl.update_virtual(cmd_cleaned)
+      var update_error = pl.update_virtual(cmd_cleaned)
+      if type(update_error) == 'string'
+        return tasmota.resp_cmnd_str(update_error)
+      end
       var state_json = pl.state_json()
       if state_json
         var cmnd_status = f'{{"{cmd_found}":{state_json}}}'
